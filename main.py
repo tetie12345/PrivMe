@@ -128,7 +128,7 @@ def getInput(screenPositionY, screenPositionX):
 
         if key in unusedKeys: continue
 
-        if key == "KEY_BACKSPACE":
+        if key == "KEY_BACKSPACE" or key == "\b" or key == chr(127):
             x-=1
             if x < screenPositionY: x = screenPositionY
             keyw = " "
@@ -137,7 +137,7 @@ def getInput(screenPositionY, screenPositionX):
         screen.addstr(y, x, keyw)
 
 
-        if key != "KEY_BACKSPACE":
+        if key != "KEY_BACKSPACE" and key != "\b" and key != chr(127):
             x+=1
             message += keyw
 
