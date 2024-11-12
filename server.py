@@ -3,7 +3,7 @@ import threading
 
 # Server constants
 HOST = '0.0.0.0'
-PORT = 5556
+PORT = 5555
 
 clients = {}  # Store connected clients with their usernames
 
@@ -22,16 +22,16 @@ def handle_client(client):
         username = client.recv(1024).decode('utf-8')  # Receive the username
         if not username:
             raise ValueError("Username missing")
-        
+
         clients[client] = username
         print(f"{username} joined the chat")
-        
+
         while True:
             encrypted_message = client.recv(1024)  # Receive the encrypted message
             if not encrypted_message:
                 break
             broadcast(f"{username}: ".encode() + encrypted_message, sender_client=client)
-    
+
     except Exception as e:
         print(f"Error handling client: {e}")
     finally:
@@ -49,7 +49,7 @@ def server():
     server_socket.bind((HOST, PORT))
     server_socket.listen()
     print(f"Server started on {HOST}:{PORT}")
-    
+
     while True:
         client, addr = server_socket.accept()
         threading.Thread(target=handle_client, args=(client,)).start()
