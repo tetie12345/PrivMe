@@ -94,7 +94,6 @@ def handle_join(data):
     
     # Start listening to the server in a new thread
     threading.Thread(target=listen_to_server, daemon=True).start()
-    emit('message', {'username': 'System', 'message': f'You joined the chat as {username}.'})
 
 @socketio.on('send_message')
 def handle_send_message(data):
