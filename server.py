@@ -59,7 +59,7 @@ def remove_client(client):
     """Remove a client from the clients list and close the connection."""
     username = clients.pop(client, "Unknown")
     print(f"{username} left the chat")
-    broadcast(f"Server: {username} has left the chat.".encode())  # Notify others
+    broadcast(f"SERVER: {username} has left the chat.".encode())  # Notify others
     client.close()
 
 def server():
