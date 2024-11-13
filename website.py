@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
@@ -16,6 +16,7 @@ socketio = SocketIO(app)
 # Chat server configuration
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 5556
+USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
 
 # Globals for client connection and encryption
 client_socket = None
@@ -72,6 +73,15 @@ def listen_to_server():
 def index():
     return render_template("index.html")
 
+@app.route("/username_requirements")
+def username_requirements():
+    # Endpoint to provide username requirements to the front end
+    return jsonify({
+        "max_length": USERNAME_MAX_LENGTH,
+        "no_spaces": True,
+        "non_empty": True
+    })
+
 @socketio.on('join')
 def handle_join(data):
     global client_socket, encryption_key, username
@@ -79,21 +89,31 @@ def handle_join(data):
     # Get username and password, connect to the server
     username = data['username']
     password = data['password']
+    
+    # Validate username based on server requirements
+    if not username or len(username) > USERNAME_MAX_LENGTH or " " in username:
+        emit('message', {'username': 'System', 'message': f"Username must be 1-{USERNAME_MAX_LENGTH} characters long and contain no spaces."})
+        return
+
     encryption_key = derive_key(password)
     
     # Set up the socket connection to the server
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect((SERVER_HOST, SERVER_PORT))
-    client_socket.send("PING".encode())
-    
-    # Wait for USERNAME_MAX_LENGTH message from the server
-    server_response = client_socket.recv(1024).decode('utf-8')
-    
-    # Send the username to the server
-    client_socket.send(username.encode())
-    
-    # Start listening to the server in a new thread
-    threading.Thread(target=listen_to_server, daemon=True).start()
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect((SERVER_HOST, SERVER_PORT))
+        client_socket.send("PING".encode())
+        
+        # Wait for USERNAME_MAX_LENGTH message from the server
+        server_response = client_socket.recv(1024).decode('utf-8')
+        
+        # Send the username to the server
+        client_socket.send(username.encode())
+        
+        # Start listening to the server in a new thread
+        threading.Thread(target=listen_to_server, daemon=True).start()
+        emit('message', {'username': 'System', 'message': f'You joined the chat as {username}.'})
+    except Exception as e:
+        emit('message', {'username': 'System', 'message': f'Failed to connect to server: {e}'})
 
 @socketio.on('send_message')
 def handle_send_message(data):
