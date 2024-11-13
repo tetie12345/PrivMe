@@ -30,7 +30,7 @@ class ChatClient:
         # Parse the character limit from the server response
         if server_response.startswith("USERNAME_MAX_LENGTH:"):
             self.username_max_length = int(server_response.split(":")[1])
-            print(f"Server allows usernames up to {self.username_max_length} characters. Username can not be empty and can't inculde spaces.")
+            print(f"Server allows usernames up to {self.username_max_length} characters. Username can not be empty and can't include spaces.")
         else:
             print("Failed to retrieve server settings.")
             self.client_socket.close()
@@ -39,7 +39,7 @@ class ChatClient:
         # Prompt for username within the limit
         while True:
             self.username = input("Enter your name: ")
-            if 0 < len(self.username) <= self.username_max_length:
+            if 0 < len(self.username) <= self.username_max_length or " " in self.username:
                 break
             print(f"Username invalid. Please have a maximum of {self.username_max_length} characters. Username can also not be empty or have spaces.")
         
