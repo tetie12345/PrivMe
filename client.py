@@ -23,13 +23,32 @@ class ChatClient:
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
 
-        # Prompt for user details outside of curses
-        self.username = input("Enter your name: ")
+        # Send ping to get server settings
+        self.client_socket.send("PING".encode())
+        server_response = self.client_socket.recv(1024).decode('utf-8')
+        
+        # Parse the character limit from the server response
+        if server_response.startswith("USERNAME_MAX_LENGTH:"):
+            self.username_max_length = int(server_response.split(":")[1])
+            print(f"Server allows usernames up to {self.username_max_length} characters.")
+        else:
+            print("Failed to retrieve server settings.")
+            self.client_socket.close()
+            return
+
+        # Prompt for username within the limit
+        while True:
+            self.username = input("Enter your name: ")
+            if len(self.username) <= self.username_max_length:
+                break
+            print(f"Username is too long! Please limit to {self.username_max_length} characters.")
+        
+        # Send the username to the server
+        self.client_socket.send(self.username.encode())
+        
+        # Prompt for password and derive the encryption key
         self.password = getpass.getpass("Enter encryption password: ")
         self.key = self.derive_key(self.password)
-        
-        # Send username unencrypted to the server
-        self.client_socket.send(self.username.encode())
 
     def derive_key(self, password):
         """Derives a 32-byte key from the password."""
@@ -92,15 +111,20 @@ class ChatClient:
                 data = self.client_socket.recv(1024)
                 if not data:
                     break
-                
-                # Separate username and message
-                username, encrypted_message = data.split(b": ", 1)
-                try:
-                    message = self.decrypt_message(encrypted_message)
-                    # Display the username in green and message in white
-                    self.display_message(username.decode('utf-8'), message, 1)
-                except Exception:
-                    self.display_message("System", "Decryption failed for a message.", 2)
+
+                # Check if the data is a plaintext server message (e.g., starting with "SYSTEM:")
+                if data.startswith(b"SYSTEM:"):
+                    message = data.decode("utf-8").replace("SYSTEM:", "")
+                    self.display_message("System", message, 2)
+                else:
+                    # Separate username and encrypted message
+                    username, encrypted_message = data.split(b": ", 1)
+                    try:
+                        message = self.decrypt_message(encrypted_message)
+                        # Display the username in green and message in white
+                        self.display_message(username.decode('utf-8'), message, 1)
+                    except Exception:
+                        self.display_message("System", "Decryption failed for a message.", 2)
                     
             except Exception as e:
                 self.display_message("System", f"Connection error: {e}", 2)
