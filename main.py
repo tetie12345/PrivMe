@@ -1,7 +1,6 @@
 import curses as c
 import socket
 import threading
-import getpass
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
@@ -25,19 +24,28 @@ class ChatClient:
         self.connectedHost = host
         self.connectedPort = port
 
-        self.client_socket.send("PING".encode())
+        self.client_socket.send("UML".encode())
         server_response = self.client_socket.recv(1024).decode('utf-8')
 
         if server_response.startswith("USERNAME_MAX_LENGTH:"):
-            self.username_max_length = int(server_respone.split(":")[1])
+            self.username_max_length = int(server_response.split(":")[1])
+            displayText(1, 0, f"Server allow up to {self.username_max_length} characters")
+        else:
+            displayText(1, 0, "ERROR: Failed to retrieve some server settings")
+            self.client.socket.close()
+            return
 
-        # Prompt for user details
-        self.username = getPromptedInput(1, 0, "Enter your name: ")
-        self.password = getPasswordPromptedInput(1, 0, "Enter encryption password: ")
-        self.key = self.derive_key(self.password)
+        while 1:
+            self.username = getPromptedInput(2, 0, "Enter your name:")
+            if (len(self.username)) <= self.username_max_length:
+                break
+            displayText(1, 0, f"Username is too long! Please limit to {self.username_max_length} characters")
 
         # Send the username unencrypted
         self.client_socket.send(self.username.encode())
+
+        self.password = getPasswordPromptedInput(1, 0, "Enter encryption password:")
+        self.key = self.derive_key(self.password)
 
         self.line = 0
         self.recievedMsgs = []

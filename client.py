@@ -12,16 +12,16 @@ class ChatClient:
         # Prompt for server address and port
         host = input("Enter server address (e.g., '127.0.0.1'): ")
         port = int(input("Enter server port (e.g., 5555): "))
-        
+
         # Establish socket connection
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
-        
+
         # Prompt for user details
         self.username = input("Enter your name: ")
         self.password = getpass.getpass("Enter encryption password: ")
         self.key = self.derive_key(self.password)
-        
+
         # Send the username unencrypted
         self.client_socket.send(self.username.encode())
 
@@ -60,17 +60,17 @@ class ChatClient:
                 data = self.client_socket.recv(1024)
                 if not data:
                     break
-                
+
                 # Separate username and message
                 username, encrypted_message = data.split(b": ", 1)
-                
+
                 # Attempt decryption, handle errors
                 try:
                     message = self.decrypt_message(encrypted_message)
                     print(f"{username.decode('utf-8')}: {message}")
                 except Exception:
                     print(f"Decryption failed for message from {username.decode('utf-8')}. Incorrect password or corrupted message.")
-                    
+
             except Exception as e:
                 print(f"Connection error: {e}")
                 break
