@@ -24,7 +24,7 @@ class ChatClient:
         self.client_socket.connect((host, port))
 
         # Send ping to get server settings
-        self.client_socket.send("PING".encode())
+        self.client_socket.send("UML".encode())
         server_response = self.client_socket.recv(1024).decode('utf-8')
         
         # Parse the character limit from the server response
