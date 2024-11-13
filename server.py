@@ -23,8 +23,8 @@ def handle_client(client):
         # Listen for the initial ping request
         message = client.recv(1024).decode('utf-8')
         
-        if message == "PING":
-            # Send username character limit to the client
+        if message == "UML":
+            # Send username character limit to the client UML == Username Max Length
             client.send(f"USERNAME_MAX_LENGTH:{USERNAME_MAX_LENGTH}".encode())
             
             # Now, receive the username
