@@ -32,7 +32,7 @@ class ChatClient:
             displayText(1, 0, f"Server allow up to {self.username_max_length} characters")
         else:
             displayText(1, 0, "ERROR: Failed to retrieve some server settings")
-            self.client.socket.close()
+            self.client_socket.close()
             return
 
         while 1:
@@ -86,19 +86,23 @@ class ChatClient:
                 if not data:
                     break
 
+                if data.startswith(b"SYSTEM:"):
+                    message = data.decode('utf-16').replace("SYSTEM:", "")
+                    displayText(5+self.line, 0, message)
                 # Separate username and message
-                username, encrypted_message = data.split(b": ", 1)
 
-                # Attempt decryption, handle errors
-                try:
-                    message = self.decrypt_message(encrypted_message)
-                    username = username.decode('utf-8')
-                    msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
-                    self.recievedMsgs.append(msg)
-                    displayText(5+self.line, 0, msg)
-                    self.line+=1
-                except Exception as e:
-                   print(e)
+                else:
+                    username, encrypted_message = data.split(b": ", 1)
+                    # Attempt decryption, handle errors
+                    try:
+                        message = self.decrypt_message(encrypted_message)
+                        username = username.decode('utf-8')
+                        msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
+                        self.recievedMsgs.append(msg)
+                        displayText(5+self.line, 0, msg)
+                        self.line+=1
+                    except Exception as e:
+                       print(e)
 
             except Exception as e:
                 print(f"Connection error: {e}")
@@ -215,10 +219,10 @@ def getPromptedInput(screenPositionY, screenPositionX, prompt):
     return renturnVal
 
 def getPasswordPromptedInput(screenPositionY, screenPositionX, prompt):
+    clearLine(screen, screenPositionY)
     displayText(screenPositionY, screenPositionX, prompt)
     renturnVal = getPasswordInput(screenPositionY, screenPositionX+len(prompt)+1)
-    screen.move(screenPositionY, 0)
-    screen.clrtoeol()
+    clearLine(screen, screenPositionY)
     return renturnVal
 
 def displayText(screenPositionY, screenPositionX, text):
@@ -227,6 +231,10 @@ def displayText(screenPositionY, screenPositionX, text):
 
 def displayMsg(msg):
     pass
+
+def clearLine(scr, screenPositionY):
+    scr.move(screenPositionY, 0)
+    scr.clrtoeol()
 
 def screenSetup(connection):
     screen.clear()
