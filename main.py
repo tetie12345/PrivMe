@@ -88,7 +88,7 @@ class ChatClient:
 
                 if data.startswith(b"SYSTEM:"):
                     message = data.decode('utf-16').replace("SYSTEM:", "")
-                    displayText(5+self.line, 0, message)
+                    displayMsg(msg)
                 # Separate username and message
 
                 else:
@@ -98,9 +98,7 @@ class ChatClient:
                         message = self.decrypt_message(encrypted_message)
                         username = username.decode('utf-8')
                         msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
-                        self.recievedMsgs.append(msg)
-                        displayText(5+self.line, 0, msg)
-                        self.line+=1
+                        displayMsg(msg)
                     except Exception as e:
                        print(e)
 
@@ -118,9 +116,7 @@ class ChatClient:
             encrypted_message = self.encrypt_message(message)
             self.client_socket.send(encrypted_message)
             msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} you: {message}"
-            self.recievedMsgs.append(msg)
-            displayText(5+self.line, 0, msg)
-            self.line += 1
+            displayMsg(msg)
 
     def run(self):
         """Run the client by starting sender and receiver threads."""
@@ -230,7 +226,16 @@ def displayText(screenPositionY, screenPositionX, text):
     screen.refresh()
 
 def displayMsg(msg):
-    pass
+    app.recievedMsgs.append(msg)
+    if 5+app.line == screen.getmaxyx()[0]-3:
+        app.recievedMsgs.pop(0)
+        for i in range(len(app.recievedMsgs)):
+            clearLine(screen, screen.getmaxyx()[0]-3-i)
+            displayText(screen.getmaxyx()[0]-3-i, 0, app.recievedMsgs[len(app.recievedMsgs)-1-i])
+    else:
+        clearLine(screen, 5+app.line)
+        displayText(5+app.line, 0, msg)
+        app.line += 1
 
 def clearLine(scr, screenPositionY):
     scr.move(screenPositionY, 0)
