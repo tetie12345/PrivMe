@@ -31,7 +31,7 @@ def handle_client(client):
             username = client.recv(1024).decode('utf-8').strip()
             
             # Validate username length
-            if not username or len(username) > USERNAME_MAX_LENGTH:
+            if not username or len(username) > USERNAME_MAX_LENGTH or " " in username:
                 client.send("ERROR: Username is invalid or too long.".encode())
                 client.close()
                 return
