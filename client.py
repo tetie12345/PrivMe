@@ -113,8 +113,8 @@ class ChatClient:
                     break
 
                 # Check if the data is a plaintext server message (e.g., starting with "SYSTEM:")
-                if data.startswith(b"SYSTEM:"):
-                    message = data.decode("utf-8").replace("SERVER:", "")
+                if data.startswith(b"Server:"):
+                    message = data.decode("utf-8").replace("Server:", "")
                     self.display_message("System", message, 2)
                 else:
                     # Separate username and encrypted message
