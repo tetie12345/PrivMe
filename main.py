@@ -32,7 +32,7 @@ class ChatClient:
             displayText(1, 0, f"Server allow up to {self.username_max_length} characters")
         else:
             displayText(1, 0, "ERROR: Failed to retrieve some server settings")
-            self.client.socket.close()
+            self.client_socket.close()
             return
 
         while 1:
@@ -86,19 +86,21 @@ class ChatClient:
                 if not data:
                     break
 
+                if data.startswith(b"SYSTEM:"):
+                    message = data.decode('utf-16').replace("SYSTEM:", "")
+                    displayMsg(msg)
                 # Separate username and message
-                username, encrypted_message = data.split(b": ", 1)
 
-                # Attempt decryption, handle errors
-                try:
-                    message = self.decrypt_message(encrypted_message)
-                    username = username.decode('utf-8')
-                    msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
-                    self.recievedMsgs.append(msg)
-                    displayText(5+self.line, 0, msg)
-                    self.line+=1
-                except Exception as e:
-                   print(e)
+                else:
+                    username, encrypted_message = data.split(b": ", 1)
+                    # Attempt decryption, handle errors
+                    try:
+                        message = self.decrypt_message(encrypted_message)
+                        username = username.decode('utf-8')
+                        msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
+                        displayMsg(msg)
+                    except Exception as e:
+                       print(e)
 
             except Exception as e:
                 print(f"Connection error: {e}")
@@ -114,9 +116,7 @@ class ChatClient:
             encrypted_message = self.encrypt_message(message)
             self.client_socket.send(encrypted_message)
             msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} you: {message}"
-            self.recievedMsgs.append(msg)
-            displayText(5+self.line, 0, msg)
-            self.line += 1
+            displayMsg(msg)
 
     def run(self):
         """Run the client by starting sender and receiver threads."""
@@ -215,10 +215,10 @@ def getPromptedInput(screenPositionY, screenPositionX, prompt):
     return renturnVal
 
 def getPasswordPromptedInput(screenPositionY, screenPositionX, prompt):
+    clearLine(screen, screenPositionY)
     displayText(screenPositionY, screenPositionX, prompt)
     renturnVal = getPasswordInput(screenPositionY, screenPositionX+len(prompt)+1)
-    screen.move(screenPositionY, 0)
-    screen.clrtoeol()
+    clearLine(screen, screenPositionY)
     return renturnVal
 
 def displayText(screenPositionY, screenPositionX, text):
@@ -226,7 +226,20 @@ def displayText(screenPositionY, screenPositionX, text):
     screen.refresh()
 
 def displayMsg(msg):
-    pass
+    app.recievedMsgs.append(msg)
+    if 5+app.line == screen.getmaxyx()[0]-3:
+        app.recievedMsgs.pop(0)
+        for i in range(len(app.recievedMsgs)):
+            clearLine(screen, screen.getmaxyx()[0]-3-i)
+            displayText(screen.getmaxyx()[0]-3-i, 0, app.recievedMsgs[len(app.recievedMsgs)-1-i])
+    else:
+        clearLine(screen, 5+app.line)
+        displayText(5+app.line, 0, msg)
+        app.line += 1
+
+def clearLine(scr, screenPositionY):
+    scr.move(screenPositionY, 0)
+    scr.clrtoeol()
 
 def screenSetup(connection):
     screen.clear()
