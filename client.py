@@ -18,7 +18,6 @@ class ChatClient:
         else:
             host = server_input
             port = int(input("Enter server port (e.g., 5555): "))
-        
         # Establish socket connection
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
@@ -111,7 +110,6 @@ class ChatClient:
                 data = self.client_socket.recv(1024)
                 if not data:
                     break
-
                 # Check if the data is a plaintext server message (e.g., starting with "SYSTEM:")
                 if data.startswith(b"Server:"):
                     message = data.decode("utf-8").replace("Server:", "")

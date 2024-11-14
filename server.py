@@ -49,7 +49,7 @@ def handle_client(client):
                 if not encrypted_message:
                     break
                 broadcast(f"{username}: ".encode() + encrypted_message, sender_client=client)
-    
+
     except Exception as e:
         print(f"Error handling client: {e}")
     finally:
@@ -68,7 +68,7 @@ def server():
     server_socket.bind((HOST, PORT))
     server_socket.listen()
     print(f"Server started on {HOST}:{PORT}")
-    
+
     while True:
         client, addr = server_socket.accept()
         threading.Thread(target=handle_client, args=(client,)).start()
