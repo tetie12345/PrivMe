@@ -57,6 +57,8 @@ class ChatClient:
         self.password = getPasswordPromptedInput(1, 0, "Enter encryption password:")
         self.key = self.derive_key(self.password)
 
+        self.client_socket.send("GETUSERS".encode())
+        users = self.client_socket.recv(1024).decode('utf-8')
 
     def derive_key(self, password):
         """Derives a 32-byte key from the password."""
@@ -99,6 +101,11 @@ class ChatClient:
                     msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} SERVER: {message}"
                     displayMsg(msg)
                 # Separate username and message
+
+                elif data.startswith(b"UserUpdate:"):
+                    users = data.decode('utf-8').replace("UserUpdate: ", "")
+                    clearLine(screen, 1)
+                    updateUsers(formatUsers(users))
 
                 else:
                     username, encrypted_message = data.split(b": ", 1)
@@ -239,17 +246,55 @@ def displayMsg(msg):
     app.recievedMsgs.append(msg)
     if 5+app.line == screen.getmaxyx()[0]-3:
         for i in range(len(app.recievedMsgs)):
-            clearLine(screen, screen.getmaxyx()[0]-3-i)
+            clearUntil(screen, screen.getmaxyx()[0]-3-i, screen.getmaxyx()[1]-(screen.getmaxyx()[1]//5))
             displayText(screen.getmaxyx()[0]-3-i, 0, app.recievedMsgs[len(app.recievedMsgs)-1-i])
         app.recievedMsgs.pop(0)
     else:
-        clearLine(screen, 5+app.line)
+        clearUntil(screen, 5+app.line, screen.getmaxyx()[1]-(screen.getmaxyx()[1]//5))
         displayText(5+app.line, 0, msg)
         app.line += 1
 
 def clearLine(scr, screenPositionY):
     scr.move(screenPositionY, 0)
     scr.clrtoeol()
+
+def clearUntil(scr, screenPositionY, stopX):
+    scr.move(screenPositionY, 0)
+    displayText(screenPositionY, 0, " "*stopX)
+
+def formatUsers(users):
+    usernames = []
+    tick = 0
+    pos = -1
+    for i in range(len(users)):
+        if users[i] == "'" and tick == 1:
+            usernames.append(users[pos+1:i])
+            tick = 0
+            pos = -1
+        elif users[i] == "'":
+            pos = i
+            tick = 1
+    return usernames
+
+def updateUsers(users):
+    usableX = screen.getmaxyx()[1]//5
+    if usableX < 11: return
+    startX = screen.getmaxyx()[1]-usableX
+    usercount = len(users)
+
+    for i in range(4, screen.getmaxyx()[0]-2):
+        displayText(i, startX, " "*usableX)
+
+    if len(users) > screen.getmaxyx()[0]-6:
+        users = users[0:screen.getmaxyx()[0]-7]
+        users.append("...")
+
+    displayText(4, startX, f"Users({usercount}):")
+    for i in range(len(users)):
+        if len(users[i]) > usableX:
+            users[i] = users[i][0:usableX-3]
+            users[i] += "..."
+        displayText(5+i, startX, users[i])
 
 def screenSetup(connection):
     screen.clear()
