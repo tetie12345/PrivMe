@@ -4,13 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatroom</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
-    <style>
-        #chatbox { height: 400px; overflow-y: auto; }
-        .message { padding: 5px; border-bottom: 1px solid #ddd; }
-        .message .username { font-weight: bold; color: green; }
-        .requirements { font-size: 0.9em; color: #555; }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
     <section class="section">
