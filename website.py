@@ -14,7 +14,7 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 # Chat server configuration
-SERVER_HOST = '81.205.202.66'
+SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 5556
 USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
 
