@@ -9,13 +9,13 @@ import os, time
 
 class ChatClient:
     def __init__(self):
-        server_input = getPromptedInput(1, 0, "Enter server address (e.g., '127.0.0.1:5555' or 'chatserver.com'): ")
+        server_input = getPromptedInput(1, 0, "Enter server address: ")
         if ':' in server_input:
             host, port = server_input.split(':')
             port = int(port)
         else:
             host = server_input
-            port = int(getPromptedInput(1, 0, "Enter server port (e.g., 5555): "))
+            port = int(getPromptedInput(1, 0, "Enter server port: "))
 
         # Establish socket connection
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -29,7 +29,7 @@ class ChatClient:
 
         if server_response.startswith("USERNAME_MAX_LENGTH:"):
             self.username_max_length = int(server_response.split(":")[1])
-            displayText(1, 0, f"Server allow up to {self.username_max_length} characters")
+            displayText(1, 0, f"Username may not contain spaces. MAX {self.username_max_length} chars")
         else:
             displayText(1, 0, "ERROR: Failed to retrieve some server settings")
             self.client_socket.close()
@@ -37,9 +37,10 @@ class ChatClient:
 
         while 1:
             self.username = getPromptedInput(2, 0, "Enter your name:")
-            if (len(self.username)) <= self.username_max_length:
+            if 0 < len(self.username) <= self.username_max_length or " " in self.username:
                 break
-            displayText(1, 0, f"Username is too long! Please limit to {self.username_max_length} characters")
+            clearLine(screen, 1)
+            displayText(1, 0, f"Invalid username")
 
         # Send the username unencrypted
         self.client_socket.send(self.username.encode())
@@ -86,9 +87,9 @@ class ChatClient:
                 if not data:
                     break
 
-                if data.startswith(b"SYSTEM:"):
-                    message = data.decode('utf-16').replace("SYSTEM:", "")
-                    displayMsg(msg)
+                if data.startswith(b"Server:"):
+                    message = data.decode('utf-8').replace("Server:", "")
+                    displayMsg(message)
                 # Separate username and message
 
                 else:
