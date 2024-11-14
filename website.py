@@ -9,17 +9,16 @@ import socket
 import threading
 
 # Flask application setup
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
 # Chat server configuration
-SERVER_HOST = '127.0.0.1'
+SERVER_HOST = '81.205.202.66'
 SERVER_PORT = 5556
 USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
 
-# Globals for client connection and encryption
-client_socket = None
+# Globals for encryption key and username
 encryption_key = None
 username = None
 
@@ -51,23 +50,54 @@ def decrypt_message(encrypted_message):
     decrypted_message = decryptor.update(encrypted_message[16:]) + decryptor.finalize()
     return decrypted_message.decode()
 
-def listen_to_server():
-    """Listen to messages from the server and broadcast to the web client."""
-    while True:
+class ChatClient:
+    """Handles a socket connection to the chat server for a single client instance."""
+    
+    def __init__(self):
+        self.client_socket = None
+    
+    def connect(self):
+        """Connect to the chat server and start listening."""
         try:
-            data = client_socket.recv(1024)
-            if data:
-                # If SYSTEM message, send directly
-                if data.startswith(b"Server:"):
-                    socketio.emit('message', {'username': 'System', 'message': data.decode('utf-8')})
-                else:
-                    # Otherwise decrypt and display
-                    username, encrypted_message = data.split(b": ", 1)
-                    message = decrypt_message(encrypted_message)
-                    socketio.emit('message', {'username': username.decode('utf-8'), 'message': message})
-        except:
-            socketio.emit('message', {'username': 'System', 'message': 'Disconnected from server.'})
-            break
+            self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client_socket.connect((SERVER_HOST, SERVER_PORT))
+            self.client_socket.send("UML".encode())  # Initial ping to get server settings
+            server_response = self.client_socket.recv(1024).decode('utf-8')  # Receive server response
+            return server_response
+        except Exception as e:
+            return str(e)
+    
+    def send_username(self, username):
+        """Send the username to the server after connecting."""
+        try:
+            self.client_socket.send(username.encode())
+        except (BrokenPipeError, OSError):
+            emit('message', {'username': 'System', 'message': 'Connection to server lost.'})
+    
+    def send_encrypted_message(self, encrypted_message):
+        """Send an encrypted message to the server."""
+        try:
+            self.client_socket.send(encrypted_message)
+        except (BrokenPipeError, OSError):
+            emit('message', {'username': 'System', 'message': 'Connection to server lost. Message could not be sent.'})
+    
+    def listen_to_server(self):
+        """Listen for incoming messages from the server."""
+        while True:
+            try:
+                data = self.client_socket.recv(1024)
+                if data:
+                    if data.startswith(b"Server:"):
+                        socketio.emit('message', {'username': 'System', 'message': data.decode('utf-8')})
+                    else:
+                        username, encrypted_message = data.split(b": ", 1)
+                        message = decrypt_message(encrypted_message)
+                        socketio.emit('message', {'username': username.decode('utf-8'), 'message': message})
+            except (BrokenPipeError, OSError):
+                socketio.emit('message', {'username': 'System', 'message': 'Disconnected from server.'})
+                break
+
+chat_client = ChatClient()  # Single instance for this app
 
 @app.route("/")
 def index():
@@ -84,9 +114,9 @@ def username_requirements():
 
 @socketio.on('join')
 def handle_join(data):
-    global client_socket, encryption_key, username
-    
-    # Get username and password, connect to the server
+    global encryption_key, username
+
+    # Get username and password from the data
     username = data['username']
     password = data['password']
     
@@ -95,32 +125,28 @@ def handle_join(data):
         emit('message', {'username': 'System', 'message': f"Username must be 1-{USERNAME_MAX_LENGTH} characters long and contain no spaces."})
         return
 
+    # Derive encryption key from password
     encryption_key = derive_key(password)
     
-    # Set up the socket connection to the server
-    try:
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect((SERVER_HOST, SERVER_PORT))
-        client_socket.send("UML".encode())
-        
-        # Wait for USERNAME_MAX_LENGTH message from the server
-        server_response = client_socket.recv(1024).decode('utf-8')
-        
-        # Send the username to the server
-        client_socket.send(username.encode())
-        
-        # Start listening to the server in a new thread
-        threading.Thread(target=listen_to_server, daemon=True).start()
-        emit('message', {'username': 'System', 'message': f'You joined the chat as {username}.'})
-    except Exception as e:
-        emit('message', {'username': 'System', 'message': f'Failed to connect to server: {e}'})
+    # Connect to server
+    server_response = chat_client.connect()
+    if "Error" in server_response:
+        emit('message', {'username': 'System', 'message': f'Failed to connect to server: {server_response}'})
+        return
+
+    # Send username to the server
+    chat_client.send_username(username)
+
+    # Start listening to the server in a separate thread
+    threading.Thread(target=chat_client.listen_to_server, daemon=True).start()
+    emit('message', {'username': 'System', 'message': f'You joined the chat as {username}.'})
 
 @socketio.on('send_message')
 def handle_send_message(data):
     message = data['message']
     encrypted_message = encrypt_message(message)
-    client_socket.send(encrypted_message)
+    chat_client.send_encrypted_message(encrypted_message)
     emit('message', {'username': 'You', 'message': message}, broadcast=True)
 
 if __name__ == "__main__":
-    socketio.run(app, host='0.0.0.0', port=80)
+    socketio.run(app, host='0.0.0.0', port=5001, debug=True)  # Changed to port 5000 for non-root access
