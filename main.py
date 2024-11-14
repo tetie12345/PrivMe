@@ -5,17 +5,26 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import os, time
+import os, time, sys
+
+mode = "normal"
+if len(sys.argv) > 1:
+    if sys.argv[1] == "debug":
+        mode = "debug"
 
 class ChatClient:
     def __init__(self):
-        server_input = getPromptedInput(1, 0, "Enter server address (e.g., '127.0.0.1:5555' or 'chatserver.com'): ")
+
+        self.line = 0
+        self.recievedMsgs = []
+
+        server_input = getPromptedInput(1, 0, "Enter server address: ")
         if ':' in server_input:
             host, port = server_input.split(':')
             port = int(port)
         else:
             host = server_input
-            port = int(getPromptedInput(1, 0, "Enter server port (e.g., 5555): "))
+            port = int(getPromptedInput(1, 0, "Enter server port: "))
 
         # Establish socket connection
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -29,7 +38,7 @@ class ChatClient:
 
         if server_response.startswith("USERNAME_MAX_LENGTH:"):
             self.username_max_length = int(server_response.split(":")[1])
-            displayText(1, 0, f"Server allow up to {self.username_max_length} characters")
+            displayText(1, 0, f"Username may not contain spaces. MAX {self.username_max_length} chars")
         else:
             displayText(1, 0, "ERROR: Failed to retrieve some server settings")
             self.client_socket.close()
@@ -37,9 +46,10 @@ class ChatClient:
 
         while 1:
             self.username = getPromptedInput(2, 0, "Enter your name:")
-            if (len(self.username)) <= self.username_max_length:
+            if 0 < len(self.username) <= self.username_max_length or " " in self.username:
                 break
-            displayText(1, 0, f"Username is too long! Please limit to {self.username_max_length} characters")
+            clearLine(screen, 1)
+            displayText(1, 0, f"Invalid username")
 
         # Send the username unencrypted
         self.client_socket.send(self.username.encode())
@@ -47,8 +57,6 @@ class ChatClient:
         self.password = getPasswordPromptedInput(1, 0, "Enter encryption password:")
         self.key = self.derive_key(self.password)
 
-        self.line = 0
-        self.recievedMsgs = []
 
     def derive_key(self, password):
         """Derives a 32-byte key from the password."""
@@ -86,8 +94,9 @@ class ChatClient:
                 if not data:
                     break
 
-                if data.startswith(b"SYSTEM:"):
-                    message = data.decode('utf-16').replace("SYSTEM:", "")
+                if data.startswith(b"Server:"):
+                    message = data.decode('utf-8').replace("Server: ", "")
+                    msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} SERVER: {message}"
                     displayMsg(msg)
                 # Separate username and message
 
@@ -100,8 +109,9 @@ class ChatClient:
                         msg = f"{time.strftime('%H:%M:%S', time.gmtime(time.time()))} {username}: {message}"
                         displayMsg(msg)
                     except Exception as e:
-                       print(e)
-
+                        if mode == "debug":
+                            clearLine(screen, 1)
+                            displayText(1, 0, f"ERROR: {e}")
             except Exception as e:
                 print(f"Connection error: {e}")
                 break
@@ -228,10 +238,10 @@ def displayText(screenPositionY, screenPositionX, text):
 def displayMsg(msg):
     app.recievedMsgs.append(msg)
     if 5+app.line == screen.getmaxyx()[0]-3:
-        app.recievedMsgs.pop(0)
         for i in range(len(app.recievedMsgs)):
             clearLine(screen, screen.getmaxyx()[0]-3-i)
             displayText(screen.getmaxyx()[0]-3-i, 0, app.recievedMsgs[len(app.recievedMsgs)-1-i])
+        app.recievedMsgs.pop(0)
     else:
         clearLine(screen, 5+app.line)
         displayText(5+app.line, 0, msg)
