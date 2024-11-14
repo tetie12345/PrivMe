@@ -101,7 +101,7 @@ def handle_join(data):
     try:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_socket.connect((SERVER_HOST, SERVER_PORT))
-        client_socket.send("PING".encode())
+        client_socket.send("UML".encode())
         
         # Wait for USERNAME_MAX_LENGTH message from the server
         server_response = client_socket.recv(1024).decode('utf-8')
