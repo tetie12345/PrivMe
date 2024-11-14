@@ -278,7 +278,9 @@ def formatUsers(users):
 
 def updateUsers(users):
     usableX = screen.getmaxyx()[1]//5
+    if usableX < 11: return
     startX = screen.getmaxyx()[1]-usableX
+    usercount = len(users)
 
     for i in range(4, screen.getmaxyx()[0]-2):
         displayText(i, startX, " "*usableX)
@@ -287,7 +289,7 @@ def updateUsers(users):
         users = users[0:screen.getmaxyx()[0]-7]
         users.append("...")
 
-    displayText(4, startX, "Users:")
+    displayText(4, startX, f"Users({usercount}):")
     for i in range(len(users)):
         if len(users[i]) > usableX:
             users[i] = users[i][0:usableX-3]
