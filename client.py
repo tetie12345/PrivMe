@@ -8,6 +8,8 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
+client_version = 0.06
+
 class ChatClient:
     def __init__(self):
         # Prompt for server address and port (address:port format or domain name) outside of curses
@@ -18,9 +20,26 @@ class ChatClient:
         else:
             host = server_input
             port = int(input("Enter server port (e.g., 5555): "))
+        
         # Establish socket connection
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((host, port))
+
+        # Send ping to get server version
+        self.client_socket.send("VERSION".encode())
+        server_response = self.client_socket.recv(1024).decode('utf-8')
+
+        if server_response.startswith("VERSION:"):
+            server_version = int(server_response.split(":")[1])
+        else:
+            print("Failed to retrieve server version.")
+            self.client_socket.close()
+            return
+        
+        if server_version == client_version:
+            print("Server and client version are the same. Checksum passed.")
+        else:
+            print("Server and client version are not the same, server is on {server_version} and client is on {client_version}. You may experience (significant) bugs.")
 
         # Send ping to get server settings
         self.client_socket.send("UML".encode())
@@ -110,6 +129,7 @@ class ChatClient:
                 data = self.client_socket.recv(1024)
                 if not data:
                     break
+
                 # Check if the data is a plaintext server message (e.g., starting with "SYSTEM:")
                 if data.startswith(b"Server:"):
                     message = data.decode("utf-8").replace("Server:", "")
