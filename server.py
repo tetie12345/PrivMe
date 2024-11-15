@@ -8,6 +8,7 @@ USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
 
 clients = {}  # Store connected clients with their usernames
 users = []
+server_version = 0.06
 
 def broadcast(message, sender_client=None):
     """Send a message to all clients except the sender."""
@@ -27,6 +28,10 @@ def handle_client(client):
         if message == "UML":
             # Send username character limit to the client UML == Username Max Length
             client.send(f"USERNAME_MAX_LENGTH:{USERNAME_MAX_LENGTH}".encode())
+        
+        elif message == "VERSION":
+            # Send server version to client
+            client.send(f"VERSION:{server_version}".encode())
 
             # Now, receive the username
             username = client.recv(1024).decode('utf-8').strip()
