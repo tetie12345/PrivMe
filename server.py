@@ -7,6 +7,7 @@ PORT = 5556
 USERNAME_MAX_LENGTH = 20  # Maximum character limit for usernames
 
 clients = {}  # Store connected clients with their usernames
+users = []
 
 def broadcast(message, sender_client=None):
     """Send a message to all clients except the sender."""
@@ -22,27 +23,34 @@ def handle_client(client):
     try:
         # Listen for the initial ping request
         message = client.recv(1024).decode('utf-8')
-        
+
         if message == "UML":
             # Send username character limit to the client UML == Username Max Length
             client.send(f"USERNAME_MAX_LENGTH:{USERNAME_MAX_LENGTH}".encode())
-            
+
             # Now, receive the username
             username = client.recv(1024).decode('utf-8').strip()
-            
+
             # Validate username length
             if not username or len(username) > USERNAME_MAX_LENGTH or " " in username:
                 client.send("ERROR: Username is invalid or too long.".encode())
                 client.close()
                 return
-            
+
             # Register client with username
             clients[client] = username
+            users.append(username)
             print(f"{username} joined the chat")
-            
+            broadcast(f"UserUpdate: {str(users)}".encode())
+
             # Notify others that a new user has joined
             broadcast(f"Server: {username} joined the chat.".encode())
-            
+
+            message = client.recv(1024).decode('utf-8')
+            if message == "GETUSERS":
+                print("Sending users list")
+                client.send(f"UserUpdate: {str(users)}".encode())
+
             # Start message reception loop
             while True:
                 encrypted_message = client.recv(1024)  # Receive the encrypted message
@@ -59,6 +67,8 @@ def remove_client(client):
     """Remove a client from the clients list and close the connection."""
     username = clients.pop(client, "Unknown")
     print(f"{username} left the chat")
+    users.remove(username)
+    broadcast(f"UserUpdate: {str(users)}".encode())
     broadcast(f"SERVER: {username} has left the chat.".encode())  # Notify others
     client.close()
 
