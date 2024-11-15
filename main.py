@@ -33,9 +33,11 @@ class ChatClient:
         self.connectedHost = host
         self.connectedPort = port
 
+        # Ask server for Max Username Length
         self.client_socket.send("UML".encode())
         server_response = self.client_socket.recv(1024).decode('utf-8')
 
+        # Check response
         if server_response.startswith("USERNAME_MAX_LENGTH:"):
             self.username_max_length = int(server_response.split(":")[1])
             displayText(1, 0, f"Username may not contain spaces. MAX {self.username_max_length} chars")
@@ -44,6 +46,13 @@ class ChatClient:
             self.client_socket.close()
             return
 
+        # Send the username unencrypted
+
+        self.client_socket.send("GETUSERS".encode())
+        users = self.client_socket.recv(1024).decode('utf-8')
+
+        self.client_socket.send("START".encode())
+
         while 1:
             self.username = getPromptedInput(2, 0, "Enter your name:")
             if 0 < len(self.username) <= self.username_max_length or " " in self.username:
@@ -51,14 +60,10 @@ class ChatClient:
             clearLine(screen, 1)
             displayText(1, 0, f"Invalid username")
 
-        # Send the username unencrypted
         self.client_socket.send(self.username.encode())
 
         self.password = getPasswordPromptedInput(1, 0, "Enter encryption password:")
         self.key = self.derive_key(self.password)
-
-        self.client_socket.send("GETUSERS".encode())
-        users = self.client_socket.recv(1024).decode('utf-8')
 
     def derive_key(self, password):
         """Derives a 32-byte key from the password."""
