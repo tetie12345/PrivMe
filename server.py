@@ -21,47 +21,53 @@ def broadcast(message, sender_client=None):
 
 def handle_client(client):
     """Handle incoming messages from a client."""
+    Recieving = False
     try:
-        # Listen for the initial ping request
-        message = client.recv(1024).decode('utf-8')
-
-        if message == "UML":
-            # Send username character limit to the client UML == Username Max Length
-            client.send(f"USERNAME_MAX_LENGTH:{USERNAME_MAX_LENGTH}".encode())
-        
-        elif message == "VERSION":
-            # Send server version to client
-            client.send(f"VERSION:{server_version}".encode())
-
-            # Now, receive the username
-            username = client.recv(1024).decode('utf-8').strip()
-
-            # Validate username length
-            if not username or len(username) > USERNAME_MAX_LENGTH or " " in username:
-                client.send("ERROR: Username is invalid or too long.".encode())
-                client.close()
-                return
-
-            # Register client with username
-            clients[client] = username
-            users.append(username)
-            print(f"{username} joined the chat")
-            broadcast(f"UserUpdate: {str(users)}".encode())
-
-            # Notify others that a new user has joined
-            broadcast(f"Server: {username} joined the chat.".encode())
-
+        while not Recieving:
+            # Listen for the initial ping request
             message = client.recv(1024).decode('utf-8')
-            if message == "GETUSERS":
+
+            if message == "UML":
+                # Send username character limit to the client UML == Username Max Length
+                client.send(f"USERNAME_MAX_LENGTH:{USERNAME_MAX_LENGTH}".encode())
+
+            elif message == "VERSION":
+                # Send server version to client
+                client.send(f"VERSION:{server_version}".encode())
+
+            elif message == "GETUSERS":
                 print("Sending users list")
                 client.send(f"UserUpdate: {str(users)}".encode())
 
-            # Start message reception loop
-            while True:
-                encrypted_message = client.recv(1024)  # Receive the encrypted message
-                if not encrypted_message:
-                    break
-                broadcast(f"{username}: ".encode() + encrypted_message, sender_client=client)
+            elif message == "START":
+                Recieving = True
+
+        Recieving = False
+        # Now, receive the username
+        username = client.recv(1024).decode('utf-8').strip()
+
+        # Validate username length
+        if not username or len(username) > USERNAME_MAX_LENGTH or " " in username:
+            client.send("ERROR: Username is invalid or too long.".encode())
+            client.close()
+            return
+
+        # Register client with username
+        clients[client] = username
+        users.append(username)
+        print(f"{username} joined the chat")
+        broadcast(f"UserUpdate: {str(users)}".encode())
+
+        # Notify others that a new user has joined
+        broadcast(f"Server: {username} joined the chat.".encode())
+
+
+        # Start message reception loop
+        while True:
+            encrypted_message = client.recv(1024)  # Receive the encrypted message
+            if not encrypted_message:
+                break
+            broadcast(f"{username}: ".encode() + encrypted_message, sender_client=client)
 
     except Exception as e:
         print(f"Error handling client: {e}")
