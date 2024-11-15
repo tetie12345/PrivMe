@@ -154,7 +154,7 @@ screen.keypad(True)
 
 
 def getInput(screenPositionY, screenPositionX):
-    unusedKeys = ["KEY_DC", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_PPAGE", "KEY_NPAGE", "KEY_IC", "KEY_END", "KEY_RESIZE"]
+    unusedKeys = ["KEY_DC", "KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT", "KEY_HOME", "KEY_PPAGE", "KEY_NPAGE", "KEY_IC", "KEY_END", "KEY_RESIZE", "KEY_SR", "KEY_SF", "KEY_SLEFT", "KEY_SRIGHT"]
     message = ""
     y, x = screenPositionY, screenPositionX
     maxSize = screen.getmaxyx()
@@ -180,7 +180,7 @@ def getInput(screenPositionY, screenPositionX):
             keyw = " "
             message = message[:-1]
 
-        if x == screen.getmaxyx()[1] and key != "KEY_BACKSPACE" and key != chr(127):
+        if x == maxSize[1] and key != "KEY_BACKSPACE" and key != chr(127):
             y+=1
             x=0
 
